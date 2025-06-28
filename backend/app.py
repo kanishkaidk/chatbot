@@ -1,9 +1,8 @@
-import os
-from fastapi import FastAPI, UploadFile, Form, File
+from fastapi import FastAPI, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import openai
-
+import whisper
 import joblib
 import pandas as pd
 import re
@@ -19,28 +18,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-openai.api_key = os.getenv("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")
-
 # Load components
-@app.post("/transcribe")
-async def transcribe_audio(file: UploadFile = File(...)):
-    audio_bytes = await file.read()
-
-    # Call OpenAI Whisper API
-    response = openai.Audio.transcribe(
-        model="whisper-1",
-        file=audio_bytes,
-        file_type=file.content_type  # e.g. "audio/mpeg" or "audio/wav"
-    )
-
-    transcription_text = response["text"]
-    return {"transcription": transcription_text}
-
+whisper_model = whisper.load_model("base")
 bias_model = joblib.load("models/bias_pipeline.pkl")
 lawyers = pd.read_csv("data/lawyers.csv")
 ngos = pd.read_csv("data/ngos.csv")
 
-openai.api_key = "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"
+openai.api_key = "YOUR_API_KEY"
 
 # Helper
 def classify_case(text):
@@ -101,5 +85,5 @@ async def transcribe(file: UploadFile):
     audio = await file.read()
     with open("temp_audio.mp3", "wb") as f:
         f.write(audio)
-    result = app.post.transcribe("temp_audio.mp3", language="hi")
+    result = whisper_model.transcribe("temp_audio.mp3", language="hi")
     return {"text": result["text"]}
